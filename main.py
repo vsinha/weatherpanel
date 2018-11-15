@@ -1,63 +1,61 @@
-##
- #  @filename   :   main.cpp
- #  @brief      :   7.5inch e-paper display demo
- #  @author     :   Yehui from Waveshare
- #
- #  Copyright (C) Waveshare     July 28 2017
- #
- # Permission is hereby granted, free of charge, to any person obtaining a copy
- # of this software and associated documnetation files (the "Software"), to deal
- # in the Software without restriction, including without limitation the rights
- # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- # copies of the Software, and to permit persons to  whom the Software is
- # furished to do so, subject to the following conditions:
- #
- # The above copyright notice and this permission notice shall be included in
- # all copies or substantial portions of the Software.
- #
- # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- # FITNESS OR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- # LIABILITY WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- # THE SOFTWARE.
- ##
-
-import epd7in5
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 #import imagedata
+import forecastio
+import time
 
-EPD_WIDTH = 640
-EPD_HEIGHT = 384
+import epd7in5
+
+bigfont = ImageFont.truetype('fonts/Roboto-Black.ttf', 100)
+smallfont = ImageFont.truetype('fonts/Roboto-Bold.ttf', 20)
+
+width = 640
+height = 384
+
+lat = 40.688727
+lng = -73.982624
+
+def load_darksky_api_key():
+    with open("darksky_key") as f:
+        return f.readline()
+
+darksky_key = load_darksky_api_key()
+
+def get_temp(forecast):
+    temp = forecast.currently().apparentTemperature
+    temp = int(round(temp, 0))
+
+    return str(temp) + " F outside"
+
+def get_time():
+    time.ctime() # 'Mon Oct 18 13:35:29 2010'
+    return time.strftime('%l:%M%p %Z on %b %d, %Y') # ' 1:36PM EDT on Oct 18, 2010'
+
+def update():
+
+    update_time = "updated: " + get_time()
+
+    forecast = forecastio.load_forecast(darksky_key, lat, lng)
+    temp_str = get_temp(forecast)
+    summary_str = forecast.currently().summary
+
+    image = Image.new('1', (width, height), 1)    # 1: clear the frame
+    draw = ImageDraw.Draw(image)
+
+    draw.text((50, 100), temp_str, font = bigfont, fill = 0)
+    draw.text((50, 220), summary_str, font = smallfont, fill = 0)
+    draw.text((50, 260), update_time, font = smallfont, fill = 0)
+
+    image = image.rotate(180)
+    image.show()
 
 def main():
-    epd = epd7in5.EPD()
-    epd.init()
+    # epd = epd7in5.EPD()
+    # epd.init()
 
-    # For simplicity, the arguments are explicit numerical coordinates
-    image = Image.new('1', (EPD_WIDTH, EPD_HEIGHT), 1)    # 1: clear the frame
-    draw = ImageDraw.Draw(image)
-    font = ImageFont.truetype('FreeMonoBold.ttf', 24)
-    draw.rectangle((0, 6, 640, 30), fill = 0)
-    draw.text((200, 10), 'e-Paper demo', font = font, fill = 255)
-    draw.rectangle((200, 80, 600, 280), fill = 0)
-    draw.arc((240, 120, 580, 220), 0, 360, fill = 255)
-    draw.rectangle((0, 80, 160, 280), fill = 255)
-    draw.arc((40, 80, 180, 220), 0, 360, fill = 0)
+    update()
 
-    print "displaying 1"
-    epd.display_frame(epd.get_frame_buffer(image))
-
-    image = Image.open('monocolor.bmp')
-
-    print "displaying 2"
-    epd.display_frame(epd.get_frame_buffer(image))
-
-    # You can get frame buffer from an image or import the buffer directly:
-    #epd.display_frame(imagedata.MONOCOLOR_BITMAP)
 
 if __name__ == '__main__':
     main()
